@@ -200,7 +200,46 @@ export const onDriverApproved = functions.firestore
     }
   });
 
-// ── 5. Daily earnings summary (scheduled) ────────────────────────────────────
+// ── 5. Bootstrap super admin (run ONCE then it locks itself) ─────────────────
+
+export const bootstrapSuperAdmin = functions.https.onRequest(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+
+  // Only works if no admin exists yet
+  const existing = await db.collection('admins').limit(1).get();
+  if (!existing.empty) {
+    res.status(400).json({ error: 'Super admin already set up. This endpoint is locked.' });
+    return;
+  }
+
+  const SUPER_ADMIN_EMAIL = 'hudhoon1999@gmail.com';
+
+  try {
+    const user = await admin.auth().getUserByEmail(SUPER_ADMIN_EMAIL);
+
+    // Set custom auth claim — embedded in JWT, no Firestore read needed
+    await admin.auth().setCustomUserClaims(user.uid, {
+      admin: true,
+      role: 'superAdmin',
+    });
+
+    // Create the Firestore admin document
+    await db.collection('admins').doc(user.uid).set({
+      email:       SUPER_ADMIN_EMAIL,
+      role:        'superAdmin',
+      isAdmin:     true,
+      createdAt:   admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    functions.logger.info('Super admin bootstrapped', { uid: user.uid, email: SUPER_ADMIN_EMAIL });
+    res.json({ success: true, uid: user.uid, message: 'Super admin created successfully.' });
+  } catch (err: any) {
+    functions.logger.error('Bootstrap failed', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── 6. Daily earnings summary (scheduled) ────────────────────────────────────
 
 export const dailyEarningsSummary = functions.pubsub
   .schedule('0 23 * * *')

@@ -137,8 +137,9 @@ service cloud.firestore {
     // ── Admins ────────────────────────────────────────────────────────────────
 
     match /admins/{adminId} {
-      allow read:   if isAdmin();
-      allow write:  if false; // Set manually in Firebase Console
+      // A user can read their own admin doc (needed for login check)
+      allow read:  if isAdmin() || (isSignedIn() && request.auth.uid == adminId);
+      allow write: if false; // Written only by Cloud Functions
     }
 
     // ── Admin action logs ─────────────────────────────────────────────────────
