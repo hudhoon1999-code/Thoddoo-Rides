@@ -41,7 +41,7 @@ const STATUS_CONFIG = {
   suspended: { label: 'Suspended', bg: 'bg-gray-100', text: 'text-gray-600' },
 };
 
-export function DriversPage() {
+export default function DriversPage() {
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [search, setSearch] = useState('');
   const [selectedDriver, setSelectedDriver] = useState<string | null>(null);

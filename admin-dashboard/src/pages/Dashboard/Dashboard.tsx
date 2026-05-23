@@ -34,7 +34,7 @@ const PENDING_DRIVERS = [
   { id: '3', name: 'Ibrahim Hassan', phone: '+9607654321', type: 'Maldivian', vehicle: 'Buggy 12-Seat', appliedAt: '1d ago' },
 ];
 
-export function Dashboard() {
+export default function Dashboard() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}

@@ -21,7 +21,7 @@ const INITIAL_PRICING: PriceRule[] = [
   { vehicleType: 'motorcycle', label: 'Motorcycle', emoji: '🛵', baseFare: 20, maxFare: 30, commissionPercent: 20, isActive: true },
 ];
 
-export function PricingPage() {
+export default function PricingPage() {
   const [pricing, setPricing] = useState<PriceRule[]>(INITIAL_PRICING);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
