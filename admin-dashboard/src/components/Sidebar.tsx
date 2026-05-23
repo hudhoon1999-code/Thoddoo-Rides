@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { id: 'events',     emoji: '🎉', label: 'Events'      },
   { id: 'activities', emoji: '🏄', label: 'Activities'  },
   { id: 'analytics',  emoji: '📈', label: 'Analytics'   },
+  { id: 'map',        emoji: '🗺', label: 'Island Map'  },
 ];
 
 interface SidebarProps {

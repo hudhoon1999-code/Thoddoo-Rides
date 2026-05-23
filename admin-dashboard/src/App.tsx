@@ -11,8 +11,9 @@ import PricingPage    from './pages/Pricing/PricingPage';
 import EventsPage     from './pages/Events/EventsPage';
 import ActivitiesPage from './pages/Activities/ActivitiesPage';
 import AnalyticsPage  from './pages/Analytics/AnalyticsPage';
+import MapPage        from './pages/Map/MapPage';
 
-type Page = 'dashboard' | 'drivers' | 'passengers' | 'rides' | 'pricing' | 'events' | 'activities' | 'analytics';
+type Page = 'dashboard' | 'drivers' | 'passengers' | 'rides' | 'pricing' | 'events' | 'activities' | 'analytics' | 'map';
 
 const PAGE_MAP: Record<Page, React.ComponentType> = {
   dashboard:   Dashboard,
@@ -23,6 +24,7 @@ const PAGE_MAP: Record<Page, React.ComponentType> = {
   events:      EventsPage,
   activities:  ActivitiesPage,
   analytics:   AnalyticsPage,
+  map:         MapPage,
 };
 
 export default function App() {
