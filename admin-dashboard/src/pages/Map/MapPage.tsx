@@ -6,14 +6,14 @@ import {
   THODDOO_GUESTHOUSES,
   THODDOO_BEACHES,
   THODDOO_KEY_LOCATIONS,
-  THODDOO_VENUES,
+  THODDOO_MOSQUES,
 } from '@shared/constants/thoddoo-locations';
 
 const C = {
   guesthouse: '#FF7A59',
   beach:      '#1CC7C1',
   key:        '#0E7490',
-  venue:      '#7C3AED',
+  mosque:     '#16A34A',
   boundary:   '#1CC7C1',
 };
 
@@ -21,17 +21,32 @@ const LAYERS = [
   { id: 'guesthouses', label: 'Guesthouses', color: C.guesthouse, count: THODDOO_GUESTHOUSES.length },
   { id: 'beaches',     label: 'Beaches',     color: C.beach,      count: THODDOO_BEACHES.length },
   { id: 'locations',   label: 'Key Places',  color: C.key,        count: THODDOO_KEY_LOCATIONS.length },
-  { id: 'venues',      label: 'Venues',      color: C.venue,      count: THODDOO_VENUES.length },
+  { id: 'mosques',     label: 'Mosques',     color: C.mosque,     count: THODDOO_MOSQUES.length },
 ] as const;
 
 type LayerId = typeof LAYERS[number]['id'];
 
+const CATEGORY_ICON: Record<string, string> = {
+  guesthouse:    '🏠',
+  ferry_jetty:   '⛴️',
+  beach:         '🏖',
+  school:        '🏫',
+  health:        '🏥',
+  government:    '🏛',
+  mosque:        '🕌',
+  other:         '📍',
+};
+
+function icon(category: string) {
+  return CATEGORY_ICON[category] ?? '📍';
+}
+
 export default function MapPage() {
   const [visible, setVisible] = useState<Record<LayerId, boolean>>({
     guesthouses: true,
-    beaches: true,
-    locations: true,
-    venues: true,
+    beaches:     true,
+    locations:   true,
+    mosques:     true,
   });
 
   const toggle = (id: LayerId) =>
@@ -49,7 +64,7 @@ export default function MapPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>Island Map</h1>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
-            Thoddoo · North Ari Atoll · 4.1603°N 72.9949°E
+            Thoddoo · North Ari Atoll · 4.1603°N 72.9949°E &mdash; Official Council Map
           </p>
         </div>
 
@@ -92,8 +107,8 @@ export default function MapPage() {
           { label: 'Guesthouses', val: THODDOO_GUESTHOUSES.length, color: C.guesthouse },
           { label: 'Beaches',     val: THODDOO_BEACHES.length,     color: C.beach },
           { label: 'Key Places',  val: THODDOO_KEY_LOCATIONS.length, color: C.key },
-          { label: 'Venues',      val: THODDOO_VENUES.length,      color: C.venue },
-          { label: 'Island size', val: '~1km²',                     color: '#64748b' },
+          { label: 'Mosques',     val: THODDOO_MOSQUES.length,     color: C.mosque },
+          { label: 'Island size', val: '~1.3 km²',                 color: '#64748b' },
         ].map((s) => (
           <div key={s.label} style={{
             background: '#fff', borderRadius: 12, padding: '10px 16px',
@@ -121,14 +136,13 @@ export default function MapPage() {
           style={{ width: '100%', height: '100%' }}
           zoomControl={true}
         >
-          {/* OpenStreetMap base — completely free, no API key */}
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
             maxZoom={19}
           />
 
-          {/* Island boundary polygon */}
+          {/* Island boundary */}
           <Polygon
             positions={boundary}
             pathOptions={{
@@ -145,16 +159,11 @@ export default function MapPage() {
             <CircleMarker
               key={loc.id}
               center={[loc.coordinates.latitude, loc.coordinates.longitude]}
-              radius={loc.isPopular ? 8 : 6}
-              pathOptions={{
-                color: '#fff',
-                fillColor: C.guesthouse,
-                fillOpacity: 0.95,
-                weight: 2,
-              }}
+              radius={loc.isPopular ? 8 : 5}
+              pathOptions={{ color: '#fff', fillColor: C.guesthouse, fillOpacity: 0.92, weight: 2 }}
             >
               <Popup>
-                <div style={{ minWidth: 140 }}>
+                <div style={{ minWidth: 150 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
                     🏠 {loc.nameEn}
                   </div>
@@ -179,16 +188,14 @@ export default function MapPage() {
               key={loc.id}
               center={[loc.coordinates.latitude, loc.coordinates.longitude]}
               radius={10}
-              pathOptions={{
-                color: '#fff',
-                fillColor: C.beach,
-                fillOpacity: 0.95,
-                weight: 2,
-              }}
+              pathOptions={{ color: '#fff', fillColor: C.beach, fillOpacity: 0.95, weight: 2 }}
             >
               <Popup>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>🏖 {loc.nameEn}</div>
-                {loc.nameRu && <div style={{ color: '#64748b', fontSize: 12 }}>{loc.nameRu}</div>}
+                <div style={{ minWidth: 140 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>🏖 {loc.nameEn}</div>
+                  {loc.nameDv && <div style={{ color: '#64748b', fontSize: 12 }}>{loc.nameDv}</div>}
+                  {loc.nameRu && <div style={{ color: '#94a3b8', fontSize: 11 }}>{loc.nameRu}</div>}
+                </div>
               </Popup>
             </CircleMarker>
           ))}
@@ -198,40 +205,36 @@ export default function MapPage() {
             <CircleMarker
               key={loc.id}
               center={[loc.coordinates.latitude, loc.coordinates.longitude]}
-              radius={8}
-              pathOptions={{
-                color: '#fff',
-                fillColor: C.key,
-                fillOpacity: 0.95,
-                weight: 2,
-              }}
+              radius={loc.isPopular ? 9 : 7}
+              pathOptions={{ color: '#fff', fillColor: C.key, fillOpacity: 0.95, weight: 2 }}
             >
               <Popup>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{loc.nameEn}</div>
-                {loc.nameDv && <div style={{ color: '#64748b', fontSize: 12 }}>{loc.nameDv}</div>}
-                <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 2, textTransform: 'capitalize' }}>
-                  {String(loc.category).replace(/_/g, ' ')}
+                <div style={{ minWidth: 150 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>
+                    {icon(loc.category)} {loc.nameEn}
+                  </div>
+                  {loc.nameDv && <div style={{ color: '#64748b', fontSize: 12 }}>{loc.nameDv}</div>}
+                  <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 2, textTransform: 'capitalize' }}>
+                    {String(loc.category).replace(/_/g, ' ')}
+                  </div>
                 </div>
               </Popup>
             </CircleMarker>
           ))}
 
-          {/* Venues */}
-          {visible.venues && THODDOO_VENUES.map((loc) => (
+          {/* Mosques */}
+          {visible.mosques && THODDOO_MOSQUES.map((loc) => (
             <CircleMarker
               key={loc.id}
               center={[loc.coordinates.latitude, loc.coordinates.longitude]}
-              radius={9}
-              pathOptions={{
-                color: '#fff',
-                fillColor: C.venue,
-                fillOpacity: 0.95,
-                weight: 2,
-              }}
+              radius={8}
+              pathOptions={{ color: '#fff', fillColor: C.mosque, fillOpacity: 0.95, weight: 2 }}
             >
               <Popup>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>🎵 {loc.nameEn}</div>
-                {loc.nameRu && <div style={{ color: '#64748b', fontSize: 12 }}>{loc.nameRu}</div>}
+                <div style={{ minWidth: 140 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>🕌 {loc.nameEn}</div>
+                  {loc.nameDv && <div style={{ color: '#64748b', fontSize: 12 }}>{loc.nameDv}</div>}
+                </div>
               </Popup>
             </CircleMarker>
           ))}
