@@ -1,0 +1,24 @@
+{
+  "name": "thoddoo-rides",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Thoddoo Island ride-hailing platform",
+  "scripts": {
+    "install:all": "npm install && npm run install:passenger && npm run install:driver && npm run install:admin",
+    "install:passenger": "cd passenger-app && npm install",
+    "install:driver": "cd driver-app && npm install",
+    "install:admin": "cd admin-dashboard && npm install",
+    "dev:passenger": "cd passenger-app && npx expo start",
+    "dev:driver": "cd driver-app && npx expo start --port 8082",
+    "dev:admin": "cd admin-dashboard && npm run dev",
+    "build:admin": "cd admin-dashboard && npm run build",
+    "deploy:admin": "cd admin-dashboard && npm run build && firebase deploy --only hosting",
+    "deploy:functions": "cd backend/functions && firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage:rules"
+  },
+  "workspaces": [
+    "passenger-app",
+    "driver-app",
+    "admin-dashboard"
+  ]
+}

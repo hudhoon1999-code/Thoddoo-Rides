@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "Thoddoo Rides – Driver",
+    "slug": "thoddoo-rides-driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "thoddoodriver",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0E7490"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.thoddoorides.driver",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Thoddoo Rides Driver needs your location to show your position to passengers.",
+        "NSLocationAlwaysUsageDescription": "Thoddoo Rides Driver needs background location to track your route during trips.",
+        "NSCameraUsageDescription": "Required for selfie verification and document uploads.",
+        "NSPhotoLibraryUsageDescription": "Required to upload vehicle and document photos.",
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0E7490"
+      },
+      "package": "com.thoddoorides.driver",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Thoddoo Rides Driver to use your location."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Thoddoo Rides Driver to access your camera."
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      },
+      "googleMapsApiKey": "REPLACE_WITH_GOOGLE_MAPS_KEY"
+    }
+  }
+}

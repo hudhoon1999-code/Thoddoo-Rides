@@ -1,0 +1,89 @@
+{
+  "folders": [
+    { "name": "📱 Passenger App",    "path": "./passenger-app" },
+    { "name": "🚐 Driver App",       "path": "./driver-app" },
+    { "name": "🛠 Admin Dashboard",  "path": "./admin-dashboard" },
+    { "name": "🔥 Backend Functions","path": "./backend" },
+    { "name": "📦 Shared",           "path": "./shared" },
+    { "name": "📚 Docs",             "path": "./docs" }
+  ],
+  "settings": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.expo": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/.expo": true,
+      "**/dist": true
+    },
+    "emmet.includeLanguages": { "typescript": "typescriptreact" },
+    "editor.bracketPairColorization.enabled": true
+  },
+  "extensions": {
+    "recommendations": [
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "ms-vscode.vscode-typescript-next",
+      "bradlc.vscode-tailwindcss",
+      "dsznajder.es7-react-js-snippets",
+      "steoates.autoimport",
+      "christian-kohler.path-intellisense",
+      "formulahendry.auto-rename-tag",
+      "usernamehw.errorlens"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Expo: Passenger App",
+        "type": "reactnativedirect",
+        "request": "launch",
+        "cwd": "${workspaceFolder:📱 Passenger App}"
+      },
+      {
+        "name": "Expo: Driver App",
+        "type": "reactnativedirect",
+        "request": "launch",
+        "cwd": "${workspaceFolder:🚐 Driver App}"
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Start: Passenger App",
+        "type": "shell",
+        "command": "cd passenger-app && npx expo start",
+        "group": { "kind": "build", "isDefault": true },
+        "presentation": { "panel": "dedicated", "reveal": "always" }
+      },
+      {
+        "label": "Start: Driver App",
+        "type": "shell",
+        "command": "cd driver-app && npx expo start --port 8082",
+        "group": "build",
+        "presentation": { "panel": "dedicated" }
+      },
+      {
+        "label": "Start: Admin Dashboard",
+        "type": "shell",
+        "command": "cd admin-dashboard && npm run dev",
+        "group": "build",
+        "presentation": { "panel": "dedicated" }
+      },
+      {
+        "label": "Install: All Packages",
+        "type": "shell",
+        "command": "npm run install:all",
+        "group": "build"
+      }
+    ]
+  }
+}

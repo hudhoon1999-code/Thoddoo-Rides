@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "Thoddoo Rides",
+    "slug": "thoddoo-rides-passenger",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "thoddoorides",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0E7490"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.thoddoorides.passenger",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Thoddoo Rides uses your location to find nearby drivers and show your pickup point on the map.",
+        "NSLocationAlwaysUsageDescription": "Thoddoo Rides uses your location to track your ride.",
+        "NSCameraUsageDescription": "Used to take your profile photo.",
+        "NSPhotoLibraryUsageDescription": "Used to select a profile photo."
+      },
+      "config": {
+        "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_API_KEY"
+      }
+    },
+    "android": {
+      "package": "com.thoddoorides.passenger",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0E7490"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Thoddoo Rides uses your location to find nearby drivers."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Thoddoo Rides needs access to your photos to set a profile picture.",
+          "cameraPermission": "Thoddoo Rides needs camera access for profile photos and selfie verification."
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-firebase/firestore",
+      "@react-native-firebase/messaging"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": { "origin": false },
+      "eas": { "projectId": "YOUR_EAS_PROJECT_ID" }
+    }
+  }
+}
