@@ -1,4 +1,7 @@
 {
+  "firestore": {
+    "rules": "backend/firestore-rules/firestore.rules"
+  },
   "hosting": {
     "public": "admin-dashboard/dist",
     "ignore": [
