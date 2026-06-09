@@ -1,0 +1,8 @@
+{
+  "ocean": "#43B5E8",
+  "land": "#F5E8C7",
+  "road": "#FFFFFF",
+  "hotel": "#FFD700",
+  "restaurant": "#FF7043",
+  "attraction": "#8E44AD"
+}

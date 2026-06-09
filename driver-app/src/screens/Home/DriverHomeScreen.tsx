@@ -1,12 +1,10 @@
 // driver-app/src/screens/Home/DriverHomeScreen.tsx
-// ============================================================
-// DRIVER HOME — Online/offline toggle + earnings + ride requests
-// ============================================================
+// DRIVER HOME — Online/offline toggle + live map + earnings + ride requests.
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Dimensions, Animated as RNAnimated,
+  Dimensions,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withRepeat,
@@ -15,16 +13,23 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, Radii, Shadows, Typography } from '../../theme/tokens';
-import { DriverStatus } from '../../types';
+import { DriverStatus, GeoPoint } from '../../../../shared/types';
+import DriverMapView from '../../components/map/ThoddooMapView';
+import { updateDriverLocation, updateDriverStatus } from '../../services/driverTrackingService';
+import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
+// firestore is used for driver profile fetch only
 
 const { width } = Dimensions.get('window');
+const MAP_HEIGHT = 220;
 
-// Mock incoming ride request
 const MOCK_REQUEST = {
   id: 'req_123',
   passenger: 'Ahmed R.',
   pickup: 'Ferry Jetty',
   dropoff: 'Palm Leaf Guesthouse',
+  pickupCoords: { latitude: 4.1585, longitude: 73.0005 },
+  dropoffCoords: { latitude: 4.1615, longitude: 72.9948 },
   distance: '0.4 km',
   fareMin: 30,
   fareMax: 40,
@@ -36,30 +41,68 @@ export function DriverHomeScreen() {
   const [status, setStatus] = useState<DriverStatus>(DriverStatus.OFFLINE);
   const [showRequest, setShowRequest] = useState(false);
   const [countdown, setCountdown] = useState(MOCK_REQUEST.timeoutSeconds);
+  const [driverName, setDriverName] = useState('Driver');
 
   const toggleScale = useSharedValue(1);
   const requestSlide = useSharedValue(300);
   const pulseOpacity = useSharedValue(0.6);
 
-  // Toggle online/offline
-  const handleToggle = () => {
+  const driverIdRef = useRef<string | null>(null);
+
+  // Get current driver info
+  useEffect(() => {
+    const uid = auth().currentUser?.uid;
+    if (!uid) return;
+    driverIdRef.current = uid;
+    firestore()
+      .collection('drivers')
+      .doc(uid)
+      .get()
+      .then((doc) => {
+        if (doc.exists) setDriverName(doc.data()?.name ?? 'Driver');
+      });
+  }, []);
+
+  // Update driver status in Firestore when toggling online/offline
+  const updateStatus = useCallback(async (newStatus: DriverStatus) => {
+    const uid = driverIdRef.current;
+    if (!uid) return;
+    updateDriverStatus(uid, newStatus).catch(() => {});
+  }, []);
+
+  // Publish location to Firestore (only when online)
+  const handleLocationUpdate = useCallback(
+    (location: GeoPoint) => {
+      const uid = driverIdRef.current;
+      if (!uid || status === DriverStatus.OFFLINE) return;
+      updateDriverLocation(uid, location).catch(() => {});
+    },
+    [status],
+  );
+
+  // Toggle online / offline
+  const handleToggle = useCallback(() => {
     toggleScale.value = withSpring(0.9, {}, () => {
       toggleScale.value = withSpring(1);
     });
 
     if (status === DriverStatus.OFFLINE) {
-      setStatus(DriverStatus.AVAILABLE);
-      // Demo: show ride request after 3 seconds
+      const newStatus = DriverStatus.AVAILABLE;
+      setStatus(newStatus);
+      updateStatus(newStatus);
+      // Demo: show ride request after 3 s
       setTimeout(() => {
         setShowRequest(true);
         setCountdown(MOCK_REQUEST.timeoutSeconds);
         requestSlide.value = withSpring(0, { damping: 15 });
       }, 3000);
     } else {
-      setStatus(DriverStatus.OFFLINE);
+      const newStatus = DriverStatus.OFFLINE;
+      setStatus(newStatus);
+      updateStatus(newStatus);
       setShowRequest(false);
     }
-  };
+  }, [status, updateStatus, toggleScale, requestSlide]);
 
   // Pulse animation when available
   useEffect(() => {
@@ -69,14 +112,14 @@ export function DriverHomeScreen() {
           withTiming(1, { duration: 700 }),
           withTiming(0.4, { duration: 700 }),
         ),
-        -1, false
+        -1, false,
       );
     } else {
       pulseOpacity.value = withTiming(0.4);
     }
-  }, [status]);
+  }, [status, pulseOpacity]);
 
-  // Countdown timer for ride request
+  // Countdown for ride request
   useEffect(() => {
     if (!showRequest) return;
     const timer = setInterval(() => {
@@ -91,7 +134,7 @@ export function DriverHomeScreen() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [showRequest]);
+  }, [showRequest, requestSlide]);
 
   const toggleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: toggleScale.value }],
@@ -106,21 +149,17 @@ export function DriverHomeScreen() {
     [DriverStatus.AVAILABLE]: { color: Colors.palmGreen, label: 'Available', bg: Colors.successLight },
     [DriverStatus.ON_TRIP]: { color: Colors.warning, label: 'On Trip', bg: Colors.warningLight },
   };
-
   const cfg = statusConfig[status];
 
   return (
     <View style={styles.container}>
-      {/* Header gradient */}
-      <LinearGradient
-        colors={['#0E7490', '#1CC7C1']}
-        style={styles.header}
-      >
+      {/* Header */}
+      <LinearGradient colors={['#0E7490', '#1CC7C1']} style={styles.header}>
         <SafeAreaView edges={['top']}>
           <View style={styles.headerContent}>
             <View>
               <Text style={styles.greeting}>Welcome back,</Text>
-              <Text style={styles.driverName}>Jamaal 👋</Text>
+              <Text style={styles.driverName}>{driverName} 👋</Text>
             </View>
             <View style={styles.codeBadge}>
               <Text style={styles.codeText}>THD-4022</Text>
@@ -136,13 +175,11 @@ export function DriverHomeScreen() {
       >
         {/* ─── Toggle ────────────────────────────────────── */}
         <View style={styles.toggleSection}>
-          {/* Status indicator */}
           <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
             <Animated.View style={[styles.statusDot, { backgroundColor: cfg.color }, pulseStyle]} />
             <Text style={[styles.statusLabel, { color: cfg.color }]}>{cfg.label}</Text>
           </View>
 
-          {/* Big toggle button */}
           <Animated.View style={toggleStyle}>
             <TouchableOpacity onPress={handleToggle} activeOpacity={0.85}>
               <LinearGradient
@@ -163,25 +200,38 @@ export function DriverHomeScreen() {
           </Animated.View>
 
           {status === DriverStatus.AVAILABLE && (
-            <Text style={styles.waitingText}>
-              🟢 Waiting for ride requests...
-            </Text>
+            <Text style={styles.waitingText}>🟢 Waiting for ride requests…</Text>
           )}
         </View>
 
-        {/* ─── Earnings Cards ─────────────────────────── */}
+        {/* ─── Live Map ─────────────────────────────────── */}
+        {status !== DriverStatus.OFFLINE && (
+          <>
+            <Text style={styles.sectionTitle}>Your Location</Text>
+            <View style={styles.mapCard}>
+              <DriverMapView
+                isOnline={status !== DriverStatus.OFFLINE}
+                onLocationUpdate={handleLocationUpdate}
+                showControls
+                mapHeight={MAP_HEIGHT}
+                style={styles.map}
+              />
+            </View>
+          </>
+        )}
+
+        {/* ─── Earnings ─────────────────────────────────── */}
         <Text style={styles.sectionTitle}>Today's Earnings</Text>
         <View style={styles.earningsGrid}>
           <EarningsCard label="Today" value="MVR 192" subtext="8 rides" emoji="💰" />
           <EarningsCard label="This Week" value="MVR 1,440" subtext="56 rides" emoji="📈" />
         </View>
-
         <View style={styles.earningsGrid}>
           <EarningsCard label="Rating" value="4.8 ⭐" subtext="1,222 reviews" emoji="🏆" />
           <EarningsCard label="Total Rides" value="340" subtext="since joining" emoji="🚐" />
         </View>
 
-        {/* ─── Safety ──────────────────────────────────── */}
+        {/* ─── Safety ───────────────────────────────────── */}
         <View style={styles.safetyCard}>
           <Text style={styles.safetyTitle}>Safety</Text>
           <View style={styles.safetyButtons}>
@@ -197,13 +247,10 @@ export function DriverHomeScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* ─── Incoming Ride Request Popup ──────────────── */}
+      {/* ─── Incoming Ride Request ───────────────────────── */}
       {showRequest && (
         <Animated.View style={[styles.requestPopup, requestStyle, Shadows.xl]}>
-          <LinearGradient
-            colors={['#FFFFFF', '#F0FDFA']}
-            style={styles.requestContent}
-          >
+          <LinearGradient colors={['#FFFFFF', '#F0FDFA']} style={styles.requestContent}>
             {/* Timer bar */}
             <View style={styles.timerBar}>
               <View
@@ -288,56 +335,151 @@ function EarningsCard({ label, value, subtext, emoji }: {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingBottom: Spacing.xl, borderBottomLeftRadius: Radii['3xl'], borderBottomRightRadius: Radii['3xl'] },
-  headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: Spacing.md },
-  greeting: { fontFamily: 'Nunito', fontSize: Typography.sizes.sm, color: 'rgba(255,255,255,0.8)' },
-  driverName: { fontFamily: 'Sora-Bold', fontSize: Typography.sizes.xl, color: Colors.white },
-  codeBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radii.pill },
+  header: {
+    paddingBottom: Spacing.xl,
+    borderBottomLeftRadius: Radii['3xl'],
+    borderBottomRightRadius: Radii['3xl'],
+  },
+  headerContent: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
+  },
+  greeting: {
+    fontFamily: 'Nunito',
+    fontSize: Typography.sizes.sm, color: 'rgba(255,255,255,0.8)',
+  },
+  driverName: {
+    fontFamily: 'Sora-Bold', fontSize: Typography.sizes.xl, color: Colors.white,
+  },
+  codeBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radii.pill,
+  },
   codeText: { fontFamily: 'Nunito-Bold', fontSize: Typography.sizes.sm, color: Colors.white },
+
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: Spacing.base, paddingTop: Spacing.lg },
+
   toggleSection: { alignItems: 'center', marginBottom: Spacing.xl },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.base, paddingVertical: Spacing.xs, borderRadius: Radii.pill, marginBottom: Spacing.lg },
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    paddingHorizontal: Spacing.base, paddingVertical: Spacing.xs,
+    borderRadius: Radii.pill, marginBottom: Spacing.lg,
+  },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusLabel: { fontFamily: 'Nunito-Bold', fontSize: Typography.sizes.sm },
-  toggleBtn: { width: 180, height: 180, borderRadius: 90, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, ...Shadows.tealGlow },
+  toggleBtn: {
+    width: 180, height: 180, borderRadius: 90,
+    alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm, ...Shadows.tealGlow,
+  },
   toggleBtnEmoji: { fontSize: 40 },
   toggleBtnText: { fontFamily: 'Sora-Bold', fontSize: Typography.sizes.lg, color: Colors.white },
-  waitingText: { fontFamily: 'Nunito', fontSize: Typography.sizes.sm, color: Colors.textSecondary, marginTop: Spacing.md },
-  sectionTitle: { fontFamily: 'Sora-SemiBold', fontSize: Typography.sizes.lg, color: Colors.textPrimary, marginBottom: Spacing.md },
+  waitingText: {
+    fontFamily: 'Nunito', fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary, marginTop: Spacing.md,
+  },
+
+  sectionTitle: {
+    fontFamily: 'Sora-SemiBold', fontSize: Typography.sizes.lg,
+    color: Colors.textPrimary, marginBottom: Spacing.md,
+  },
+
+  mapCard: {
+    borderRadius: Radii.card, overflow: 'hidden',
+    marginBottom: Spacing.lg, ...Shadows.md,
+  },
+  map: { borderRadius: Radii.card },
+
   earningsGrid: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md },
-  earningsCard: { flex: 1, backgroundColor: Colors.white, borderRadius: Radii.card, padding: Spacing.base },
+  earningsCard: {
+    flex: 1, backgroundColor: Colors.white,
+    borderRadius: Radii.card, padding: Spacing.base,
+  },
   earningsEmoji: { fontSize: 24, marginBottom: 4 },
-  earningsValue: { fontFamily: 'Sora-Bold', fontSize: Typography.sizes.xl, color: Colors.textPrimary },
-  earningsLabel: { fontFamily: 'Nunito-SemiBold', fontSize: Typography.sizes.sm, color: Colors.textSecondary, marginTop: 2 },
-  earningsSubtext: { fontFamily: 'Nunito', fontSize: Typography.sizes.xs, color: Colors.textTertiary },
-  safetyCard: { backgroundColor: Colors.white, borderRadius: Radii.card, padding: Spacing.base, marginTop: Spacing.md, ...Shadows.sm },
-  safetyTitle: { fontFamily: 'Sora-SemiBold', fontSize: Typography.sizes.base, color: Colors.textPrimary, marginBottom: Spacing.md },
+  earningsValue: {
+    fontFamily: 'Sora-Bold', fontSize: Typography.sizes.xl, color: Colors.textPrimary,
+  },
+  earningsLabel: {
+    fontFamily: 'Nunito-SemiBold', fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary, marginTop: 2,
+  },
+  earningsSubtext: {
+    fontFamily: 'Nunito', fontSize: Typography.sizes.xs, color: Colors.textTertiary,
+  },
+
+  safetyCard: {
+    backgroundColor: Colors.white, borderRadius: Radii.card,
+    padding: Spacing.base, marginTop: Spacing.md, ...Shadows.sm,
+  },
+  safetyTitle: {
+    fontFamily: 'Sora-SemiBold', fontSize: Typography.sizes.base,
+    color: Colors.textPrimary, marginBottom: Spacing.md,
+  },
   safetyButtons: { flexDirection: 'row', gap: Spacing.md },
-  sosBtn: { flex: 1, backgroundColor: Colors.errorLight, borderRadius: Radii.button, paddingVertical: Spacing.md, alignItems: 'center' },
-  sosText: { fontFamily: 'Nunito-Bold', fontSize: Typography.sizes.base, color: Colors.error },
-  reportBtn: { flex: 1, backgroundColor: Colors.warningLight, borderRadius: Radii.button, paddingVertical: Spacing.md, alignItems: 'center' },
-  reportText: { fontFamily: 'Nunito-Bold', fontSize: Typography.sizes.base, color: Colors.warning },
+  sosBtn: {
+    flex: 1, backgroundColor: Colors.errorLight,
+    borderRadius: Radii.button, paddingVertical: Spacing.md, alignItems: 'center',
+  },
+  sosText: {
+    fontFamily: 'Nunito-Bold', fontSize: Typography.sizes.base, color: Colors.error,
+  },
+  reportBtn: {
+    flex: 1, backgroundColor: Colors.warningLight,
+    borderRadius: Radii.button, paddingVertical: Spacing.md, alignItems: 'center',
+  },
+  reportText: {
+    fontFamily: 'Nunito-Bold', fontSize: Typography.sizes.base, color: Colors.warning,
+  },
+
   // Request popup
-  requestPopup: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopLeftRadius: Radii['3xl'], borderTopRightRadius: Radii['3xl'], overflow: 'hidden' },
+  requestPopup: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    borderTopLeftRadius: Radii['3xl'], borderTopRightRadius: Radii['3xl'],
+    overflow: 'hidden',
+  },
   requestContent: { padding: Spacing.xl, paddingTop: Spacing.lg },
-  timerBar: { height: 4, backgroundColor: Colors.border, borderRadius: 2, marginBottom: Spacing.base, overflow: 'hidden' },
+  timerBar: {
+    height: 4, backgroundColor: Colors.border,
+    borderRadius: 2, marginBottom: Spacing.base, overflow: 'hidden',
+  },
   timerFill: { height: '100%', backgroundColor: Colors.lagoonTeal, borderRadius: 2 },
-  requestHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.base },
-  requestTitle: { fontFamily: 'Sora-Bold', fontSize: Typography.sizes.xl, color: Colors.textPrimary },
-  countdownBadge: { backgroundColor: Colors.coralSunset, paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Radii.pill },
+  requestHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: Spacing.base,
+  },
+  requestTitle: {
+    fontFamily: 'Sora-Bold', fontSize: Typography.sizes.xl, color: Colors.textPrimary,
+  },
+  countdownBadge: {
+    backgroundColor: Colors.coralSunset,
+    paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Radii.pill,
+  },
   countdownText: { fontFamily: 'Sora-Bold', fontSize: Typography.sizes.lg, color: Colors.white },
-  requestDetails: { gap: Spacing.sm, marginBottom: Spacing.md, backgroundColor: Colors.background, borderRadius: Radii.lg, padding: Spacing.md },
+  requestDetails: {
+    gap: Spacing.sm, marginBottom: Spacing.md,
+    backgroundColor: Colors.background, borderRadius: Radii.lg, padding: Spacing.md,
+  },
   requestLocation: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   locationDot: { width: 10, height: 10, borderRadius: 5 },
-  locationText: { fontFamily: 'Nunito-SemiBold', fontSize: Typography.sizes.base, color: Colors.textPrimary, flex: 1 },
+  locationText: {
+    fontFamily: 'Nunito-SemiBold', fontSize: Typography.sizes.base,
+    color: Colors.textPrimary, flex: 1,
+  },
   requestMeta: { flexDirection: 'row', gap: Spacing.xl, marginBottom: Spacing.lg },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   metaEmoji: { fontSize: 16 },
-  metaText: { fontFamily: 'Nunito-SemiBold', fontSize: Typography.sizes.base, color: Colors.textPrimary },
+  metaText: {
+    fontFamily: 'Nunito-SemiBold', fontSize: Typography.sizes.base, color: Colors.textPrimary,
+  },
   requestActions: { flexDirection: 'row', gap: Spacing.md },
-  declineBtn: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center', borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radii.button },
-  declineBtnText: { fontFamily: 'Nunito-Bold', fontSize: Typography.sizes.base, color: Colors.textSecondary },
+  declineBtn: {
+    flex: 1, paddingVertical: Spacing.md, alignItems: 'center',
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radii.button,
+  },
+  declineBtnText: {
+    fontFamily: 'Nunito-Bold', fontSize: Typography.sizes.base, color: Colors.textSecondary,
+  },
   acceptBtn: { flex: 2, borderRadius: Radii.button, overflow: 'hidden', ...Shadows.tealGlow },
   acceptBtnGradient: { paddingVertical: Spacing.md + 2, alignItems: 'center' },
   acceptBtnText: { fontFamily: 'Sora-Bold', fontSize: Typography.sizes.lg, color: Colors.white },
