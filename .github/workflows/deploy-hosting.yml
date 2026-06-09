@@ -1,0 +1,37 @@
+name: Deploy Admin Dashboard → Firebase Hosting
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin-dashboard/**'
+      - 'shared/**'
+      - 'firebase.json'
+      - '.firebaserc'
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: admin-dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: admin-dashboard
+
+      - name: Build
+        run: npm run build
+        working-directory: admin-dashboard
+
+      - name: Deploy to Firebase Hosting
+        run: npx firebase-tools deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive
